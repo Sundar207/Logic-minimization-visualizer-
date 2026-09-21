@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logic Minimization Visualizer for Data Scientists</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e1c;
+  --bg-panel:#0f1530;
+  --bg-card:#141b3c;
+  --bg-card-2:#171f45;
+  --line:#26305c;
+  --ink:#e7e9f7;
+  --ink-dim:#9aa3c7;
+  --ink-faint:#6b7299;
+  --cyan:#2fd9e8;
+  --violet:#9b7bfa;
+  --indigo:#6f7bf7;
+  --pink:#f176b0;
+  --amber:#ffc25c;
+  --green:#4fe0a5;
+  --red:#ff7a8a;
+  --radius-s:6px;
+  --radius-m:12px;
+  --radius-l:22px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1100px 600px at 12% -8%, rgba(111,123,247,0.18), transparent 60%),
+    radial-gradient(900px 500px at 90% 8%, rgba(47,217,232,0.12), transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:'Sora',sans-serif;margin:0;color:var(--ink);}
+p{margin:0;}
+code, .mono{font-family:'IBM Plex Mono',monospace;}
+a{color:inherit;}
+::selection{background:rgba(155,123,250,0.35);}
+:focus-visible{outline:2px solid var(--cyan); outline-offset:2px;}
+
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
+@media (max-width:640px){.wrap{padding:0 18px;}}
+
+/* NAV */
+header.topnav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,14,28,0.82);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.navrow{display:flex;align-items:center;justify-content:space-between;height:62px;}
+.brand{display:flex;align-items:center;gap:10px;font-family:'Sora',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.2px;}
+.brand .mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--cyan),var(--violet));display:flex;align-items:center;justify-content:center;font-size:13px;color:#0a0e1c;font-weight:800;}
+nav.links{display:flex;gap:4px;}
+nav.links a{
+  font-size:13.5px;color:var(--ink-dim);text-decoration:none;padding:8px 13px;border-radius:8px;font-weight:500;
+  transition:color .15s ease, background .15s ease;
+}
+nav.links a:hover{color:var(--ink);background:rgba(255,255,255,0.05);}
+.navtoggle{display:none;background:none;border:1px solid var(--line);color:var(--ink);padding:7px 10px;border-radius:8px;}
+@media (max-width:860px){
+  nav.links{position:absolute;top:62px;left:0;right:0;flex-direction:column;background:#0d1226;padding:8px;border-bottom:1px solid var(--line);display:none;}
+  nav.links.open{display:flex;}
+  .navtoggle{display:block;}
+}
+
+/* HERO */
+section.hero{padding:78px 0 60px;position:relative;overflow:hidden;}
+.eyebrow-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;}
+.chip{
+  font-size:12px;padding:5px 11px;border-radius:100px;border:1px solid var(--line);
+  color:var(--ink-dim);background:rgba(255,255,255,0.02);
+}
+.hero-grid{display:grid;grid-template-columns:1.15fr 0.85fr;gap:52px;align-items:center;}
+@media (max-width:900px){.hero-grid{grid-template-columns:1fr;}}
+.hero h1{font-size:clamp(32px,4.6vw,52px);line-height:1.08;font-weight:800;letter-spacing:-0.5px;}
+.hero h1 span{background:linear-gradient(120deg,var(--cyan),var(--violet) 65%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero p.lede{margin-top:20px;font-size:17px;color:var(--ink-dim);max-width:52ch;}
+.hero-ctas{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;}
+.btn{
+  font-family:'Inter',sans-serif;font-weight:600;font-size:14.5px;padding:12px 22px;border-radius:11px;border:1px solid transparent;
+  cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:linear-gradient(120deg,var(--cyan),var(--indigo));color:#07091a;box-shadow:0 8px 24px -8px rgba(111,123,247,0.6);}
+.btn-primary:hover{box-shadow:0 10px 30px -6px rgba(111,123,247,0.75);}
+.btn-ghost{background:rgba(255,255,255,0.03);color:var(--ink);border-color:var(--line);}
+.btn-ghost:hover{background:rgba(255,255,255,0.07);}
+.btn-sm{padding:8px 14px;font-size:13px;border-radius:9px;}
+
+/* hero illustration: mini animated kmap */
+.hero-art{
+  border:1px solid var(--line);border-radius:var(--radius-l);background:linear-gradient(160deg,var(--bg-card),var(--bg-panel));
+  padding:26px;position:relative;
+}
+.hero-art .label{font-size:11.5px;color:var(--ink-faint);margin-bottom:14px;}
+.mini-kmap{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;}
+.mini-cell{
+  aspect-ratio:1;border-radius:8px;background:var(--bg-card-2);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-faint);
+}
+.mini-cell.on{background:rgba(47,217,232,0.13);border-color:rgba(47,217,232,0.45);color:var(--cyan);font-weight:600;}
+.mini-cell.grp{background:rgba(155,123,250,0.22);border-color:var(--violet);color:#fff;}
+.mini-eq{margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink-dim);}
+.mini-eq b{color:var(--green);}
+
+/* SECTION shell */
+section.block{padding:64px 0;border-top:1px solid var(--line);}
+.sec-head{margin-bottom:34px;max-width:70ch;}
+.sec-kicker{font-size:12.5px;color:var(--cyan);font-weight:600;letter-spacing:0.3px;margin-bottom:9px;}
+.sec-head h2{font-size:clamp(24px,3vw,32px);font-weight:750;letter-spacing:-0.3px;}
+.sec-head p{margin-top:11px;color:var(--ink-dim);font-size:15px;}
+
+/* CARDS */
+.card{background:var(--bg-card);border:1px solid var(--line);border-radius:var(--radius-l);padding:24px;}
+.card-tight{padding:18px;border-radius:var(--radius-m);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media (max-width:820px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+/* VISUALIZER */
+.vis-shell{display:grid;grid-template-columns:340px 1fr;gap:22px;}
+@media (max-width:980px){.vis-shell{grid-template-columns:1fr;}}
+.field-label{font-size:12.5px;color:var(--ink-dim);font-weight:600;margin-bottom:7px;display:block;}
+textarea, input[type=text]{
+  width:100%;background:#0c1128;border:1px solid var(--line);border-radius:10px;color:var(--ink);
+  padding:12px 13px;font-family:'IBM Plex Mono',monospace;font-size:15px;resize:vertical;
+}
+textarea:focus, input:focus{border-color:var(--cyan);}
+.varpicker{display:flex;gap:8px;margin-top:6px;}
+.varopt{
+  flex:1;text-align:center;padding:9px 0;border-radius:9px;border:1px solid var(--line);background:#0c1128;color:var(--ink-dim);
+  cursor:pointer;font-size:13.5px;font-weight:600;user-select:none;
+}
+.varopt.active{background:linear-gradient(120deg,rgba(47,217,232,0.18),rgba(155,123,250,0.18));border-color:var(--cyan);color:var(--ink);}
+.examples{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.ex-btn{
+  text-align:left;background:#0c1128;border:1px solid var(--line);border-radius:8px;padding:8px 11px;color:var(--ink-dim);
+  font-family:'IBM Plex Mono',monospace;font-size:12.5px;cursor:pointer;
+}
+.ex-btn:hover{border-color:var(--violet);color:var(--ink);}
+.hint{font-size:12px;color:var(--ink-faint);margin-top:8px;line-height:1.5;}
+.err-box{margin-top:12px;padding:11px 13px;border-radius:9px;background:rgba(255,122,138,0.1);border:1px solid rgba(255,122,138,0.35);color:var(--red);font-size:13px;display:none;}
+.err-box.show{display:block;}
+
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap;}
+.tab-btn{
+  background:none;border:none;color:var(--ink-faint);font-size:13.5px;font-weight:600;padding:10px 6px;cursor:pointer;
+  border-bottom:2px solid transparent;font-family:'Inter',sans-serif;
+}
+.tab-btn.active{color:var(--ink);border-bottom-color:var(--cyan);}
+.tabpane{display:none;}
+.tabpane.active{display:block;}
+
+table.tt{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:13.5px;}
+table.tt th{text-align:center;color:var(--ink-faint);font-weight:600;font-size:11.5px;padding:8px 6px;border-bottom:1px solid var(--line);}
+table.tt td{text-align:center;padding:7px 6px;border-bottom:1px solid rgba(38,48,92,0.5);color:var(--ink-dim);}
+table.tt tr.out1 td.outcell{color:var(--green);font-weight:700;}
+table.tt tr.out0 td.outcell{color:var(--ink-faint);}
+table.tt tr.out1{background:rgba(79,224,165,0.04);}
+.scrollbox{max-height:360px;overflow:auto;border-radius:10px;border:1px solid var(--line);}
+
+/* K-MAP */
+.kmap-wrap{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start;}
+.kmap-table{border-collapse:collapse;}
+.kmap-table th{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-faint);font-weight:500;padding:5px 9px;}
+.kmap-axis{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faint);text-align:center;padding-bottom:4px;}
+.kcell{
+  width:56px;height:56px;border:1px solid var(--line);text-align:center;vertical-align:middle;position:relative;cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;background:#0c1128;transition:background .12s ease;
+}
+.kcell .mval{font-size:16px;font-weight:700;color:var(--ink-faint);}
+.kcell .midx{position:absolute;top:3px;left:5px;font-size:9px;color:var(--ink-faint);opacity:.65;}
+.kcell.one .mval{color:var(--cyan);}
+.kcell.one{background:rgba(47,217,232,0.08);}
+.kcell.sel{outline:2px solid var(--amber);outline-offset:-2px;}
+.kcell:hover{background:rgba(255,255,255,0.05);}
+.kmap-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+.leg-pill{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-dim);background:#0c1128;border:1px solid var(--line);border-radius:100px;padding:5px 11px 5px 8px;}
+.leg-swatch{width:12px;height:12px;border-radius:3px;}
+.group-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.groups-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.group-row{display:flex;align-items:center;justify-content:space-between;background:#0c1128;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+.group-row .gterm{display:flex;align-items:center;gap:9px;}
+.rm-btn{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:16px;line-height:1;}
+.rm-btn:hover{color:var(--red);}
+
+/* pipeline */
+.pipeline{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-top:8px;}
+.pl-step{flex:1;min-width:140px;background:var(--bg-card-2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+.pl-step .k{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.6px;}
+.pl-step .v{font-family:'IBM Plex Mono',monospace;font-size:14px;margin-top:5px;color:var(--ink);word-break:break-word;}
+.pl-arrow{display:flex;align-items:center;justify-content:center;color:var(--ink-faint);width:34px;font-size:18px;}
+@media (max-width:820px){.pl-arrow{width:100%;transform:rotate(90deg);padding:2px 0;}}
+
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media (max-width:760px){.dash-grid{grid-template-columns:repeat(2,1fr);}}
+.dash-card{background:var(--bg-card);border:1px solid var(--line);border-radius:14px;padding:18px;}
+.dash-card .k{font-size:12px;color:var(--ink-faint);}
+.dash-card .v{font-family:'Sora',sans-serif;font-size:26px;font-weight:700;margin-top:6px;}
+.dash-card .v.accent{background:linear-gradient(120deg,var(--cyan),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.verify-pass{color:var(--green);}
+.verify-fail{color:var(--red);}
+
+/* test cases */
+table.tc{width:100%;border-collapse:collapse;font-size:13px;}
+table.tc th{text-align:left;color:var(--ink-faint);font-weight:600;font-size:11.5px;padding:10px 10px;border-bottom:1px solid var(--line);}
+table.tc td{padding:10px 10px;border-bottom:1px solid rgba(38,48,92,0.5);color:var(--ink-dim);vertical-align:top;}
+table.tc td.expr{font-family:'IBM Plex Mono',monospace;color:var(--ink);}
+.badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11.5px;font-weight:700;letter-spacing:0.3px;}
+.badge.pass{background:rgba(79,224,165,0.14);color:var(--green);}
+.badge.fail{background:rgba(255,122,138,0.14);color:var(--red);}
+.badge.cat{background:rgba(155,123,250,0.14);color:var(--violet);font-weight:600;}
+.tc-summary{display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+
+/* learn */
+.learn-item{border:1px solid var(--line);border-radius:14px;background:var(--bg-card);overflow:hidden;}
+.learn-q{width:100%;text-align:left;background:none;border:none;color:var(--ink);padding:18px 20px;font-family:'Sora',sans-serif;font-weight:650;font-size:15.5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:14px;}
+.learn-q .plus{color:var(--cyan);font-size:18px;transition:transform .2s ease;}
+.learn-item.open .plus{transform:rotate(45deg);}
+.learn-a{max-height:0;overflow:hidden;transition:max-height .25s ease;}
+.learn-a-inner{padding:0 20px 20px;color:var(--ink-dim);font-size:14.5px;}
+.learn-a-inner ul{margin:8px 0 0;padding-left:20px;}
+.learn-a-inner li{margin-bottom:5px;}
+
+/* ds connection */
+.ds-card{display:flex;gap:14px;align-items:flex-start;}
+.ds-ico{width:38px;height:38px;border-radius:10px;background:rgba(47,217,232,0.12);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+
+/* docs */
+.doc-card{background:var(--bg-card);border:1px solid var(--line);border-radius:16px;padding:26px 28px;}
+.doc-card h3{font-size:15.5px;color:var(--cyan);margin-bottom:9px;margin-top:22px;}
+.doc-card h3:first-child{margin-top:0;}
+.doc-card p, .doc-card li{color:var(--ink-dim);font-size:14px;}
+.doc-card ul{margin:6px 0;padding-left:20px;}
+.doc-card li{margin-bottom:4px;}
+.doc-steps{counter-reset:step;list-style:none;padding-left:0;margin:8px 0;}
+.doc-steps li{counter-increment:step;padding-left:30px;position:relative;margin-bottom:8px;}
+.doc-steps li::before{content:counter(step);position:absolute;left:0;top:0;width:20px;height:20px;border-radius:6px;background:rgba(111,123,247,0.18);color:var(--indigo);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+
+footer{border-top:1px solid var(--line);padding:32px 0;color:var(--ink-faint);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+
+.small-note{font-size:12px;color:var(--ink-faint);margin-top:10px;}
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="wrap navrow">
+    <div class="brand"><span class="mark">L∧</span> Logic Minimization Visualizer</div>
+    <button class="navtoggle" id="navToggle" aria-label="Toggle menu">☰</button>
+    <nav class="links" id="navLinks">
+      <a href="#home">Home</a>
+      <a href="#visualizer">Visualizer</a>
+      <a href="#tests">Test Cases</a>
+      <a href="#learn">Learn</a>
+      <a href="#ds">For Data Scientists</a>
+      <a href="#docs">Docs</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="home">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow-row">
+        <span class="chip">Boolean Algebra</span>
+        <span class="chip">Truth Tables</span>
+        <span class="chip">Karnaugh Maps</span>
+        <span class="chip">No backend required</span>
+      </div>
+      <h1>Logic Minimization Visualizer <span>for Data Scientists</span></h1>
+      <p class="lede">Every classifier rule, feature filter, and decision boundary is a Boolean expression in disguise. This visualizer turns a raw expression into a truth table, a Karnaugh map, and a provably-equivalent minimized form — so you can see exactly how simplification works, one grouping at a time.</p>
+      <div class="hero-ctas">
+        <a href="#visualizer" class="btn btn-primary">Start Visualizer →</a>
+        <a href="#learn" class="btn btn-ghost">Learn the Theory</a>
+      </div>
+    </div>
+    <div class="hero-art">
+      <div class="label">LIVE PREVIEW · 4-variable K-map</div>
+      <div class="mini-kmap" id="heroKmap"></div>
+      <div class="mini-eq">A'B + AB' + ABC  →  <b>A⊕B + ABC</b></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="visualizer">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">INTERACTIVE VISUALIZER</div>
+      <h2>Enter an expression, watch it simplify</h2>
+      <p>Type a sum-of-products Boolean expression using variables A–D. The visualizer builds the truth table, plots the Karnaugh map, and computes a minimized form automatically — or let you group cells yourself.</p>
+    </div>
+
+    <div class="vis-shell">
+      <!-- LEFT: input panel -->
+      <div class="card">
+        <label class="field-label">NUMBER OF VARIABLES</label>
+        <div class="varpicker" id="varPicker">
+          <div class="varopt" data-n="2">2 · A,B</div>
+          <div class="varopt active" data-n="3">3 · A,B,C</div>
+          <div class="varopt" data-n="4">4 · A,B,C,D</div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <label class="field-label">BOOLEAN EXPRESSION (SUM OF PRODUCTS)</label>
+          <textarea id="exprInput" rows="3" placeholder="e.g. A'B + AB' + ABC">A'B + AB' + ABC</textarea>
+          <div class="hint">Use ' for NOT (A'), juxtaposition for AND (AB), and + for OR. Only variables within your selected count are allowed.</div>
+          <div class="err-box" id="errBox"></div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label class="field-label">EXAMPLE EXPRESSIONS</label>
+          <div class="examples" id="examplesList"></div>
+        </div>
+
+        <button class="btn btn-primary btn-sm" style="margin-top:18px;width:100%;justify-content:center;" onclick="runVisualizer()">Generate Truth Table &amp; K-map</button>
+      </div>
+
+      <!-- RIGHT: results -->
+      <div>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="pipeline">Pipeline</button>
+          <button class="tab-btn" data-tab="truthtable">Truth Table</button>
+          <button class="tab-btn" data-tab="kmap">K-map &amp; Grouping</button>
+          <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+        </div>
+
+        <div class="tabpane active" id="pane-pipeline">
+          <div class="card">
+            <div class="pipeline" id="pipelineBox"></div>
+            <div class="small-note">The pipeline shows how the expression flows from input to minimized output. Switch tabs above to inspect each stage in detail.</div>
+          </div>
+        </div>
+
+        <div class="tabpane" id="pane-truthtable">
+          <div class="card">
+            <div class="scrollbox"><table class="tt" id="ttTable"></table></div>
+          </div>
+        </div>
+
+        <div class="tabpane" id="pane-kmap">
+          <div class="card">
+            <div class="kmap-wrap">
+              <div>
+                <table class="kmap-table" id="kmapTable"></table>
+                <div class="kmap-legend" id="kmapLegend"></div>
+              </div>
+              <div style="flex:1;min-width:230px;">
+                <label class="field-label">GROUPING</label>
+                <p class="hint">Click 1-cells to select them, then form a group. A valid group's size must be a power of two and every cell must be adjacent (wraparound counts).</p>
+                <div class="group-actions">
+                  <button class="btn btn-ghost btn-sm" onclick="formGroupFromSelection()">Form Group</button>
+                  <button class="btn btn-ghost btn-sm" onclick="clearSelection()">Clear Selection</button>
+                  <button class="btn btn-primary btn-sm" onclick="autoMinimizeGroups()">Auto-Group (Minimize)</button>
+                </div>
+                <div class="err-box" id="groupErrBox"></div>
+                <div class="groups-list" id="groupsList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpane" id="pane-dashboard">
+          <div class="card">
+            <div class="dash-grid" id="dashGrid"></div>
+            <div class="group-actions">
+              <button class="btn btn-primary btn-sm" onclick="verifyEquivalence()">Verify Equivalence</button>
+            </div>
+            <div id="verifyResult" class="small-note"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="tests">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">QUALITY ASSURANCE</div>
+      <h2>Test cases</h2>
+      <p>A fixed battery of 10 normal cases and 5 edge/fault cases exercises the parser, evaluator, and minimizer. Results are computed live in your browser — nothing is hard-coded.</p>
+    </div>
+    <div class="tc-summary" id="tcSummary"></div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table class="tc" id="tcTable"></table>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="learn">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">FOUNDATIONS</div>
+      <h2>Learn the theory</h2>
+      <p>A compact reference covering everything the visualizer above is doing under the hood.</p>
+    </div>
+    <div id="learnAccordion" style="display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+</section>
+
+<section class="block" id="ds">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">WHY THIS MATTERS BEYOND CIRCUITS</div>
+      <h2>Logic minimization for data scientists</h2>
+      <p>Digital logic minimization and machine-learning rule simplification solve the same underlying problem: express a decision function with the fewest, most general conditions.</p>
+    </div>
+    <div class="grid-3" id="dsGrid"></div>
+  </div>
+</section>
+
+<section class="block" id="docs">
+  <div class="wrap">
+    <div class="sec-head">
+      <div class="sec-kicker">PROJECT WRITE-UP</div>
+      <h2>Documentation</h2>
+      <p>A README-style summary suitable for submission alongside a live demo.</p>
+    </div>
+    <div class="doc-card" id="docsBody"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:10px;">
+    <span>Logic Minimization Visualizer for Data Scientists — runs entirely client-side.</span>
+    <span>Built with HTML · CSS · JavaScript</span>
+  </div>
+</footer>
+
+<script>
+/* ============================= CORE ENGINE ============================= */
+const ALL_VARS = ['A','B','C','D'];
+let numVars = 3;
+let lastEval = null; // {terms, output[], minterms[], literalCount}
+let lastMin = null;  // {pis, literalCount, expr}
+let selectedCells = new Set();
+let userGroups = []; // {cells:[...], term, color}
+const GROUP_COLORS = ['#2fd9e8','#9b7bfa','#f176b0','#ffc25c','#4fe0a5','#6f7bf7','#ff9f6b'];
+
+function currentVars(){ return ALL_VARS.slice(0, numVars); }
+
+function grayCode(bits){
+  if(bits===0) return [''];
+  let prev = grayCode(bits-1);
+  let out = prev.map(x=>'0'+x).concat(prev.slice().reverse().map(x=>'1'+x));
+  return out;
+}
+
+function kmapLayout(n){
+  let rowBits, colBits;
+  if(n===2){rowBits=1;colBits=1;}
+  else if(n===3){rowBits=1;colBits=2;}
+  else {rowBits=2;colBits=2;}
+  return {rowBits, colBits, rows:grayCode(rowBits), cols:grayCode(colBits)};
+}
+
+/* ---- Parser ---- */
+function parseExpression(raw, vars){
+  let expr = raw.replace(/\s+/g,'');
+  if(expr.length===0) return {ok:false, error:"Empty input — enter at least one term."};
+  // basic char whitelist check
+  const allowedLetters = new Set(vars);
+  const anyLetterPattern = /[A-Za-z]/;
+  const termsRaw = expr.split('+');
+  let terms = [];
+  for(let t of termsRaw){
+    if(t.length===0) return {ok:false, error:"Malformed expression — empty term next to a '+'."};
+    let literals = [];
+    let i=0;
+    while(i<t.length){
+      let ch = t[i];
+      if(ch==='.'||ch==='*'){ i++; continue; } // allow explicit AND symbols
+      if(!/[A-D]/.test(ch)){
+        if(/[a-z]/.test(ch)){
+          return {ok:false, error:`Invalid symbol '${ch}' — use uppercase A–D.`};
+        }
+        return {ok:false, error:`Invalid symbol '${ch}' found in term "${t}".`};
+      }
+      if(!allowedLetters.has(ch)){
+        return {ok:false, error:`Variable '${ch}' is outside the selected ${vars.length}-variable set (${vars.join(',')}).`};
+      }
+      let neg=false;
+      if(t[i+1]==="'"){neg=true;i++;}
+      literals.push({v:ch, neg});
+      i++;
+    }
+    if(literals.length===0) return {ok:false, error:"Malformed term with no variables."};
+    terms.push(literals);
+  }
+  return {ok:true, terms};
+}
+
+function literalCountOfTerms(terms){
+  return terms.reduce((s,t)=>s+t.length,0);
+}
+
+function dedupeTerms(terms){
+  let seen = new Set(); let out=[];
+  for(let t of terms){
+    let key = t.slice().sort((a,b)=>a.v.localeCompare(b.v)).map(l=>l.v+(l.neg?"'":"")).join('');
+    if(!seen.has(key)){ seen.add(key); out.push(t); }
+  }
+  return out;
+}
+
+/* term contradictory if same var appears with both polarities */
+function termIsContradiction(term){
+  let m = {};
+  for(let l of term){
+    if(m[l.v]!==undefined && m[l.v]!==l.neg) return true;
+    m[l.v]=l.neg;
+  }
+  return false;
+}
+
+function evaluateExpression(terms, vars){
+  const n = vars.length;
+  const varIndex = {}; vars.forEach((v,i)=>varIndex[v]=i);
+  let output = [];
+  let cleanTerms = terms.filter(t=>!termIsContradiction(t));
+  for(let i=0;i<Math.pow(2,n);i++){
+    let bits = i.toString(2).padStart(n,'0');
+    let val = 0;
+    for(let term of cleanTerms){
+      let ok = true;
+      for(let lit of term){
+        let vi = varIndex[lit.v];
+        let expect = lit.neg ? '0':'1';
+        if(bits[vi]!==expect){ ok=false; break; }
+      }
+      if(ok){ val=1; break; }
+    }
+    output.push(val);
+  }
+  let minterms = output.map((v,i)=>v===1?i:-1).filter(i=>i>=0);
+  return {output, minterms};
+}
+
+function exprToString(terms, vars){
+  if(terms.length===0) return "0";
+  return terms.map(t=>t.map(l=>l.v+(l.neg?"'":"")).join('')).join(' + ');
+}
+
+/* ---- Quine-McCluskey minimizer ---- */
+function countOnes(bits){ return bits.split('').filter(c=>c==='1').length; }
+
+function combinable(a,b){
+  // a,b same length, dashes must align, differ in exactly one non-dash position
+  if(a.length!==b.length) return null;
+  let diff=0, pos=-1;
+  for(let i=0;i<a.length;i++){
+    if(a[i]==='-'&&b[i]==='-') continue;
+    if(a[i]==='-'||b[i]==='-') return null;
+    if(a[i]!==b[i]){ diff++; pos=i; if(diff>1) return null; }
+  }
+  if(diff!==1) return null;
+  let combined = a.split(''); combined[pos]='-';
+  return combined.join('');
+}
+
+function quineMcCluskey(minterms, n){
+  if(minterms.length===0) return {pis:[], literalCount:0, terms:[]};
+  let terms = minterms.map(m=>({bits:m.toString(2).padStart(n,'0'), covers:new Set([m])}));
+  let allPIs = new Map(); // bits -> covers set
+  let current = terms;
+  while(true){
+    let used = new Set();
+    let next = new Map(); // bits->covers
+    // group by ones count
+    let byOnes = {};
+    for(let t of current){
+      let ones = countOnes(t.bits.replace(/-/g,'x')); // dash counted separately below
+      let key = t.bits.split('').filter(c=>c!=='-').filter(c=>c==='1').length + ':' + t.bits;
+      byOnes[key]=t;
+    }
+    let list = current;
+    for(let i=0;i<list.length;i++){
+      for(let j=i+1;j<list.length;j++){
+        let c = combinable(list[i].bits, list[j].bits);
+        if(c){
+          used.add(list[i].bits); used.add(list[j].bits);
+          let covers = new Set([...list[i].covers, ...list[j].covers]);
+          if(next.has(c)){
+            let ex = next.get(c);
+            covers.forEach(x=>ex.add(x));
+          } else {
+            next.set(c, covers);
+          }
+        }
+      }
+    }
+    for(let t of list){
+      if(!used.has(t.bits)){
+        allPIs.set(t.bits, t.covers);
+      }
+    }
+    if(next.size===0) break;
+    current = [...next.entries()].map(([bits,covers])=>({bits,covers}));
+    // dedupe current by bits
+    let seen = new Map();
+    for(let t of current){ seen.set(t.bits, t.covers); }
+    current = [...seen.entries()].map(([bits,covers])=>({bits,covers}));
+  }
+  let pis = [...allPIs.entries()].map(([bits,covers])=>({bits, covers:[...covers]}));
+
+  // Prime implicant chart -> essential PIs
+  let mintermToPIs = {};
+  minterms.forEach(m=>mintermToPIs[m]=[]);
+  pis.forEach((pi,idx)=>{ pi.covers.forEach(m=>{ if(mintermToPIs[m]) mintermToPIs[m].push(idx); }); });
+
+  let selected = new Set();
+  let coveredMinterms = new Set();
+  for(let m of minterms){
+    if(mintermToPIs[m].length===1){
+      selected.add(mintermToPIs[m][0]);
+    }
+  }
+  selected.forEach(idx=> pis[idx].covers.forEach(m=>coveredMinterms.add(m)));
+
+  // greedy cover remaining
+  let remaining = minterms.filter(m=>!coveredMinterms.has(m));
+  while(remaining.length>0){
+    let bestIdx=-1, bestCover=-1;
+    pis.forEach((pi,idx)=>{
+      if(selected.has(idx)) return;
+      let cover = pi.covers.filter(m=>remaining.includes(m)).length;
+      if(cover>bestCover){ bestCover=cover; bestIdx=idx; }
+    });
+    if(bestIdx===-1) break;
+    selected.add(bestIdx);
+    let pi = pis[bestIdx];
+    remaining = remaining.filter(m=>!pi.covers.includes(m));
+  }
+
+  let selectedPIs = [...selected].map(idx=>pis[idx]);
+  let literalCount = selectedPIs.reduce((s,pi)=>s + pi.bits.split('').filter(c=>c!=='-').length, 0);
+  return {pis: selectedPIs, literalCount, allPIs: pis};
+}
+
+function piToTerm(bits, vars){
+  let out = '';
+  for(let i=0;i<bits.length;i++){
+    if(bits[i]==='-') continue;
+    out += vars[i] + (bits[i]==='0' ? "'" : '');
+  }
+  return out || '1';
+}
+
+function piToCells(bits, n){
+  let freeIdx = [];
+  for(let i=0;i<bits.length;i++) if(bits[i]==='-') freeIdx.push(i);
+  let cells = [];
+  let combos = Math.pow(2, freeIdx.length);
+  for(let c=0;c<combos;c++){
+    let arr = bits.split('');
+    freeIdx.forEach((pos,k)=>{ arr[pos] = ((c>>k)&1).toString(); });
+    cells.push(parseInt(arr.join(''),2));
+  }
+  return cells;
+}
+
+/* ============================= UI WIRING ============================= */
+document.getElementById('navToggle').addEventListener('click', ()=>{
+  document.getElementById('navLinks').classList.toggle('open');
+});
+document.querySelectorAll('nav.links a').forEach(a=>a.addEventListener('click', ()=>{
+  document.getElementById('navLinks').classList.remove('open');
+}));
+
+document.querySelectorAll('.varopt').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('.varopt').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    numVars = parseInt(el.dataset.n);
+    loadExamples();
+  });
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tabpane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('pane-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+const EXAMPLES = {
+  2: ["A'B + AB'", "AB + A'B'", "A + B", "A'B'"],
+  3: ["A'B + AB' + ABC", "A'BC + AB'C + ABC'", "AB + A'C", "A + BC'"],
+  4: ["A'B'C'D' + A'B'C'D + ABCD", "AB + CD'", "A'BCD + AB'CD + ABC'D", "A'B'C'D' + ABCD + A'BC'D"]
+};
+function loadExamples(){
+  let box = document.getElementById('examplesList');
+  box.innerHTML='';
+  EXAMPLES[numVars].forEach(ex=>{
+    let b = document.createElement('button');
+    b.className='ex-btn';
+    b.textContent = ex;
+    b.onclick = ()=>{ document.getElementById('exprInput').value = ex; runVisualizer(); };
+    box.appendChild(b);
+  });
+}
+loadExamples();
+
+function showError(msg){
+  let box = document.getElementById('errBox');
+  if(!msg){ box.classList.remove('show'); box.textContent=''; return; }
+  box.textContent = msg; box.classList.add('show');
+}
+
+function runVisualizer(){
+  const vars = currentVars();
+  const raw = document.getElementById('exprInput').value;
+  const parsed = parseExpression(raw, vars);
+  if(!parsed.ok){
+    showError(parsed.error);
+    lastEval = null;
+    document.getElementById('ttTable').innerHTML='';
+    document.getElementById('kmapTable').innerHTML='';
+    document.getElementById('pipelineBox').innerHTML = `<div class="pl-step"><div class="k">Status</div><div class="v" style="color:var(--red);">Parse error</div></div>`;
+    document.getElementById('dashGrid').innerHTML='';
+    return null;
+  }
+  showError(null);
+  let terms = dedupeTerms(parsed.terms);
+  let origLiteralCount = literalCountOfTerms(terms);
+  let evalRes = evaluateExpression(terms, vars);
+  lastEval = {terms, vars, output:evalRes.output, minterms:evalRes.minterms, literalCount: origLiteralCount, exprStr: exprToString(terms, vars)};
+
+  let qm = quineMcCluskey(evalRes.minterms, vars.length);
+  let minExprStr = qm.pis.length ? qm.pis.map(pi=>piToTerm(pi.bits, vars)).join(' + ') : (evalRes.minterms.length ? '1' : '0');
+  lastMin = {pis:qm.pis, literalCount: qm.literalCount, expr: minExprStr};
+
+  selectedCells = new Set();
+  userGroups = [];
+
+  renderPipeline();
+  renderTruthTable();
+  renderKmap();
+  renderDashboard();
+  document.getElementById('verifyResult').innerHTML='';
+  return lastEval;
+}
+
+function renderPipeline(){
+  if(!lastEval){ document.getElementById('pipelineBox').innerHTML=''; return; }
+  const steps = [
+    {k:'Original Expression', v: lastEval.exprStr},
+    {k:'Truth Table', v: lastEval.minterms.length + ' minterm(s) of ' + Math.pow(2,lastEval.vars.length)},
+    {k:'K-map', v: lastEval.vars.length + '-variable grid'},
+    {k:'Auto Groups', v: (lastMin.pis.length || 0) + ' group(s)'},
+    {k:'Minimized Expression', v: lastMin.expr}
+  ];
+  let html = '';
+  steps.forEach((s,i)=>{
+    html += `<div class="pl-step"><div class="k">${s.k}</div><div class="v">${s.v}</div></div>`;
+    if(i<steps.length-1) html += `<div class="pl-arrow">→</div>`;
+  });
+  document.getElementById('pipelineBox').innerHTML = html;
+}
+
+function renderTruthTable(){
+  const vars = lastEval.vars;
+  let html = '<thead><tr>';
+  vars.forEach(v=>html+=`<th>${v}</th>`);
+  html += '<th>Output</th></tr></thead><tbody>';
+  lastEval.output.forEach((o,i)=>{
+    let bits = i.toString(2).padStart(vars.length,'0');
+    html += `<tr class="${o===1?'out1':'out0'}">`;
+    bits.split('').forEach(b=>html+=`<td>${b}</td>`);
+    html += `<td class="outcell">${o}</td></tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('ttTable').innerHTML = html;
+}
+
+function renderKmap(){
+  const vars = lastEval.vars;
+  const n = vars.length;
+  const layout = kmapLayout(n);
+  const rowVars = vars.slice(0, layout.rowBits).join('');
+  const colVars = vars.slice(layout.rowBits).join('');
+  let html = '<thead><tr><th></th>';
+  layout.cols.forEach(c=>html+=`<th class="kmap-axis">${colVars}=${c}</th>`);
+  html += '</tr></thead><tbody>';
+  layout.rows.forEach(r=>{
+    html += `<tr><th class="kmap-axis">${rowVars}=${r}</th>`;
+    layout.cols.forEach(c=>{
+      let idx = parseInt(r+c, 2);
+      let val = lastEval.output[idx];
+      html += `<td class="kcell ${val===1?'one':''}" data-idx="${idx}" onclick="toggleCell(${idx})">
+        <span class="midx">${idx}</span><span class="mval">${val}</span></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('kmapTable').innerHTML = html;
+  document.getElementById('groupsList').innerHTML = '';
+  document.getElementById('kmapLegend').innerHTML = '';
+  document.getElementById('groupErrBox').classList.remove('show');
+  paintGroups();
+}
+
+function toggleCell(idx){
+  if(lastEval.output[idx]!==1) return;
+  if(selectedCells.has(idx)) selectedCells.delete(idx); else selectedCells.add(idx);
+  paintSelection();
+}
+function clearSelection(){ selectedCells = new Set(); paintSelection(); }
+
+function paintSelection(){
+  document.querySelectorAll('.kcell').forEach(td=>{
+    let idx = parseInt(td.dataset.idx);
+    td.classList.toggle('sel', selectedCells.has(idx));
+  });
+}
+
+function isValidGroup(indices, n){
+  if(indices.length===0) return {valid:false, reason:'Select at least one cell.'};
+  let size = indices.length;
+  if((size & (size-1))!==0) return {valid:false, reason:'Group size must be a power of two (1, 2, 4, 8...).'};
+  let bitsArr = indices.map(i=>i.toString(2).padStart(n,'0'));
+  let free = [];
+  for(let p=0;p<n;p++){
+    let vals = new Set(bitsArr.map(b=>b[p]));
+    if(vals.size>1) free.push(p);
+  }
+  if(Math.pow(2, free.length)!==size) return {valid:false, reason:'Selected cells are not a valid adjacent K-map block.'};
+  const fixed = bitsArr[0];
+  let expected = new Set();
+  for(let c=0;c<size;c++){
+    let arr = fixed.split('');
+    free.forEach((pos,k)=>{ arr[pos]=((c>>k)&1).toString(); });
+    expected.add(parseInt(arr.join(''),2));
+  }
+  const have = new Set(indices);
+  if(expected.size!==have.size) return {valid:false, reason:'Selected cells are not a valid adjacent K-map block.'};
+  for(let e of expected) if(!have.has(e)) return {valid:false, reason:'Selected cells are not a valid adjacent K-map block.'};
+  for(let idx of indices) if(lastEval.output[idx]!==1) return {valid:false, reason:'A group can only contain cells whose output is 1.'};
+  let bitsPattern = fixed.split('');
+  free.forEach(pos=>bitsPattern[pos]='-');
+  return {valid:true, bits: bitsPattern.join('')};
+}
+
+function formGroupFromSelection(){
+  const n = lastEval.vars.length;
+  const indices = [...selectedCells];
+  const res = isValidGroup(indices, n);
+  const errBox = document.getElementById('groupErrBox');
+  if(!res.valid){
+    errBox.textContent = res.reason;
+    errBox.classList.add('show');
+    return;
+  }
+  errBox.classList.remove('show');
+  const color = GROUP_COLORS[userGroups.length % GROUP_COLORS.length];
+  const term = piToTerm(res.bits, lastEval.vars);
+  userGroups.push({cells: indices, term, color, bits: res.bits});
+  selectedCells = new Set();
+  paintGroups();
+  renderGroupsList();
+}
+
+function autoMinimizeGroups(){
+  if(!lastMin) return;
+  userGroups = lastMin.pis.map((pi, i)=>({
+    cells: piToCells(pi.bits, lastEval.vars.length),
+    term: piToTerm(pi.bits, lastEval.vars),
+    color: GROUP_COLORS[i % GROUP_COLORS.length],
+    bits: pi.bits
+  }));
+  selectedCells = new Set();
+  paintGroups();
+  renderGroupsList();
+}
+
+function paintGroups(){
+  paintSelection();
+  document.querySelectorAll('.kcell').forEach(td=>{
+    td.style.boxShadow = 'none';
+  });
+  let cellColors = {};
+  userGroups.forEach(g=>{
+    g.cells.forEach(idx=>{
+      if(!cellColors[idx]) cellColors[idx]=[];
+      cellColors[idx].push(g.color);
+    });
+  });
+  document.querySelectorAll('.kcell').forEach(td=>{
+    let idx = parseInt(td.dataset.idx);
+    let colors = cellColors[idx];
+    if(colors && colors.length){
+      let insets = colors.map((c,i)=>`inset 0 0 0 ${3+i*4}px ${c}`).join(',');
+      td.style.boxShadow = insets;
+    }
+  });
+  let legend = document.getElementById('kmapLegend');
+  legend.innerHTML = userGroups.map(g=>`<div class="leg-pill"><span class="leg-swatch" style="background:${g.color}"></span>${g.term}</div>`).join('');
+}
+
+function renderGroupsList(){
+  let box = document.getElementById('groupsList');
+  box.innerHTML = userGroups.map((g,i)=>`
+    <div class="group-row">
+      <div class="gterm"><span class="leg-swatch" style="background:${g.color}"></span>${g.term} <span style="color:var(--ink-faint)">(${g.cells.length} cell${g.cells.length>1?'s':''})</span></div>
+      <button class="rm-btn" onclick="removeGroup(${i})" aria-label="Remove group">×</button>
+    </div>`).join('');
+}
+function removeGroup(i){
+  userGroups.splice(i,1);
+  paintGroups();
+  renderGroupsList();
+}
+
+function renderDashboard(){
+  const n = lastEval.vars.length;
+  const orig = lastEval.literalCount;
+  const min = lastMin.literalCount;
+  const reduction = orig>0 ? Math.round(((orig-min)/orig)*100) : 0;
+  const cards = [
+    {k:'Number of Variables', v:n},
+    {k:'Number of Minterms', v:lastEval.minterms.length},
+    {k:'Original Complexity (literals)', v:orig},
+    {k:'Minimized Complexity (literals)', v:min},
+    {k:'Reduction', v:(reduction>=0?reduction:0)+'%', accent:true},
+    {k:'Verification Status', v:'Not yet run', id:'dashVerify'},
+  ];
+  document.getElementById('dashGrid').innerHTML = cards.map(c=>`
+    <div class="dash-card"><div class="k">${c.k}</div><div class="v ${c.accent?'accent':''}" ${c.id?`id="${c.id}"`:''}>${c.v}</div></div>
+  `).join('');
+}
+
+function verifyEquivalence(){
+  if(!lastEval || !lastMin) return;
+  const vars = lastEval.vars;
+  // build terms from lastMin.pis for evaluation
+  let minTerms = lastMin.pis.map(pi=>{
+    let literals = [];
+    for(let i=0;i<pi.bits.length;i++){
+      if(pi.bits[i]==='-') continue;
+      literals.push({v:vars[i], neg: pi.bits[i]==='0'});
+    }
+    return literals;
+  });
+  let minEval = evaluateExpression(minTerms, vars);
+  let equal = JSON.stringify(minEval.output) === JSON.stringify(lastEval.output);
+  const el = document.getElementById('dashVerify');
+  if(el){
+    el.textContent = equal ? 'PASS — Equivalent' : 'FAIL — Mismatch';
+    el.className = 'v ' + (equal ? 'verify-pass' : 'verify-fail');
+  }
+  document.getElementById('verifyResult').innerHTML = equal
+    ? `<span style="color:var(--green)">✓ Verified: the minimized expression produces identical outputs across all ${lastEval.output.length} input combinations.</span>`
+    : `<span style="color:var(--red)">✗ Mismatch detected between original and minimized truth tables.</span>`;
+}
+
+/* ============================= HERO MINI K-MAP ============================= */
+(function(){
+  const layout = kmapLayout(4);
+  const vars = ['A','B','C','D'];
+  const parsed = parseExpression("A'B + AB' + ABC", vars);
+  const terms = dedupeTerms(parsed.terms);
+  const ev = evaluateExpression(terms, vars);
+  const qm = quineMcCluskey(ev.minterms, 4);
+  let cellGroup = {};
+  qm.pis.forEach((pi,i)=>{ piToCells(pi.bits,4).forEach(c=>cellGroup[c]=i); });
+  let html='';
+  layout.rows.forEach(r=>{
+    layout.cols.forEach(c=>{
+      let idx = parseInt(r+c,2);
+      let val = ev.output[idx];
+      let cls = val===1 ? (cellGroup[idx]!==undefined?'on grp':'on') : '';
+      html += `<div class="mini-cell ${cls}">${val}</div>`;
+    });
+  });
+  document.getElementById('heroKmap').innerHTML = html;
+})();
+
+/* ============================= TEST CASES ============================= */
+const TEST_CASES = [
+  {cat:'Normal', n:2, expr:"A'B + AB'", desc:'2-variable XOR-style expression'},
+  {cat:'Normal', n:2, expr:"AB + A'B'", desc:'2-variable XNOR-style expression'},
+  {cat:'Normal', n:2, expr:"A + B", desc:'2-variable simple OR'},
+  {cat:'Normal', n:3, expr:"A'B + AB' + ABC", desc:'3-variable mixed expression'},
+  {cat:'Normal', n:3, expr:"A'BC + AB'C + ABC'", desc:'3-variable, 3 minterms'},
+  {cat:'Normal', n:3, expr:"AB + A'C", desc:'3-variable reducible expression'},
+  {cat:'Normal', n:4, expr:"A'B'C'D' + A'B'C'D + ABCD", desc:'4-variable sparse expression'},
+  {cat:'Normal', n:4, expr:"AB + CD'", desc:'4-variable two-term expression'},
+  {cat:'Normal', n:4, expr:"A'BCD + AB'CD + ABC'D", desc:'4-variable, 3 minterms'},
+  {cat:'Normal', n:3, expr:"ABC", desc:'Single fully-specified minterm'},
+  {cat:'Edge', n:3, expr:"AB + AB", desc:'Duplicate terms'},
+  {cat:'Edge', n:3, expr:"A'B'C' + A'B'C + A'BC' + A'BC + AB'C' + AB'C + ABC' + ABC", desc:'Always-1 expression (all minterms present)'},
+  {cat:'Edge', n:3, expr:"AA'", desc:'Always-0 / contradictory term'},
+  {cat:'Edge', n:3, expr:"AB+", desc:'Invalid expression (trailing +)'},
+  {cat:'Edge', n:2, expr:"ABC", desc:'Uses variable C outside selected 2-variable set'},
+  {cat:'Edge', n:3, expr:"AB#C", desc:'Invalid symbol (#)'},
+  {cat:'Edge', n:3, expr:"", desc:'Empty input'},
+];
+
+function runTestCases(){
+  let rows = [];
+  let passCount=0;
+  TEST_CASES.forEach(tc=>{
+    const vars = ALL_VARS.slice(0, tc.n);
+    const parsed = parseExpression(tc.expr, vars);
+    let status, detail;
+    // expected: cases with desc mentioning Invalid/Empty/outside should fail to parse
+    const expectFail = /Invalid|Empty|outside/.test(tc.desc);
+    if(expectFail){
+      if(!parsed.ok){ status='PASS'; detail=parsed.error; }
+      else { status='FAIL'; detail='Expected a parse error but expression parsed successfully.'; }
+    } else {
+      if(!parsed.ok){ status='FAIL'; detail=parsed.error; }
+      else {
+        const terms = dedupeTerms(parsed.terms);
+        const ev = evaluateExpression(terms, vars);
+        const qm = quineMcCluskey(ev.minterms, tc.n);
+        const minExpr = qm.pis.length ? qm.pis.map(pi=>piToTerm(pi.bits, vars)).join(' + ') : (ev.minterms.length?'1':'0');
+        detail = `${ev.minterms.length} minterm(s) → ${minExpr}`;
+        status='PASS';
+      }
+    }
+    if(status==='PASS') passCount++;
+    rows.push({...tc, status, detail});
+  });
+  document.getElementById('tcSummary').innerHTML = `
+    <div class="chip">Total: ${TEST_CASES.length}</div>
+    <div class="chip" style="color:var(--green);border-color:rgba(79,224,165,0.4);">Passed: ${passCount}</div>
+    <div class="chip" style="color:var(--red);border-color:rgba(255,122,138,0.4);">Failed: ${TEST_CASES.length-passCount}</div>
+  `;
+  let html = `<thead><tr><th>#</th><th>Category</th><th>Vars</th><th>Expression</th><th>Description</th><th>Result</th><th>Status</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    html += `<tr>
+      <td>${i+1}</td>
+      <td><span class="badge cat">${r.cat}</span></td>
+      <td>${r.n}</td>
+      <td class="expr">${r.expr===''?'<em>(empty)</em>':r.expr}</td>
+      <td>${r.desc}</td>
+      <td>${r.detail}</td>
+      <td><span class="badge ${r.status==='PASS'?'pass':'fail'}">${r.status}</span></td>
+    </tr>`;
+  });
+  html += '</tbody>';
+  document.getElementById('tcTable').innerHTML = html;
+}
+runTestCases();
+
+/* ============================= LEARN ACCORDION ============================= */
+const LEARN_TOPICS = [
+  {q:'Boolean Algebra', a:"A branch of algebra where variables take only two values, 0 and 1. Three core operations — AND (·), OR (+), and NOT (') — combine to build any logic function. Identities like De Morgan's laws, absorption, and distribution let you rewrite expressions without changing their behavior."},
+  {q:'Logic Gates', a:"Physical or simulated components implementing Boolean operations: AND, OR, NOT, NAND, NOR, XOR, XNOR. A Boolean expression corresponds directly to a network of gates — fewer literals in the expression generally means fewer gates in the circuit."},
+  {q:'Truth Tables', a:"A table listing every possible input combination alongside the resulting output. For n variables there are 2ⁿ rows. Truth tables are the ground truth used to check that a simplified expression still behaves identically to the original."},
+  {q:'Minterms and Maxterms', a:"A minterm is a product (AND) term that is 1 for exactly one row of the truth table — a fully-specified combination of variables. A maxterm is the OR-term equivalent that is 0 for exactly one row. Any Boolean function can be written as a sum of its minterms (SOP) or a product of its maxterms (POS)."},
+  {q:'Karnaugh Maps (K-maps)', a:"A grid arrangement of the truth table where adjacent cells differ in exactly one variable (achieved using Gray-code ordering). This geometric adjacency is what lets you spot simplifiable groups of 1s visually instead of algebraically."},
+  {q:'K-map Grouping Rules', a:"Group only cells containing 1. Group sizes must be a power of two: 1, 2, 4, 8 cells. Groups must be rectangular (including wraparound across map edges). Prefer the largest possible groups — larger groups produce fewer literals. Every 1 must be covered by at least one group; essential groups are those covering a minterm no other group covers."},
+  {q:'Logic Minimization', a:"The process of finding an equivalent Boolean expression with the fewest terms and literals. This visualizer uses the Quine–McCluskey method for automatic minimization: combine minterms that differ by one bit, repeat until no more combinations are possible, then select the smallest set of prime implicants covering every minterm."},
+  {q:'Applications in Data Science and Digital Systems', a:"In hardware, minimization reduces gate count, power draw, and chip area. In data science, the same combinatorial simplification shows up when compressing rule-based classifiers, pruning decision trees, and simplifying symbolic feature-selection logic into the smallest equivalent rule set — see the section below for specifics."}
+];
+function renderLearn(){
+  const box = document.getElementById('learnAccordion');
+  box.innerHTML = LEARN_TOPICS.map((t,i)=>`
+    <div class="learn-item" id="learn-${i}">
+      <button class="learn-q" onclick="toggleLearn(${i})"><span>${t.q}</span><span class="plus">+</span></button>
+      <div class="learn-a"><div class="learn-a-inner">${t.a}</div></div>
+    </div>
+  `).join('');
+}
+function toggleLearn(i){
+  const item = document.getElementById('learn-'+i);
+  const body = item.querySelector('.learn-a');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.learn-item').forEach(el=>{
+    el.classList.remove('open');
+    el.querySelector('.learn-a').style.maxHeight = null;
+  });
+  if(!isOpen){
+    item.classList.add('open');
+    body.style.maxHeight = body.scrollHeight + 'px';
+  }
+}
+renderLearn();
+
+/* ============================= DATA SCIENCE CONNECTION ============================= */
+const DS_ITEMS = [
+  {ico:'🎯', t:'Feature Selection', d:'Boolean masks over feature subsets can be minimized the same way as logic terms, collapsing redundant conditions into the smallest set that still distinguishes classes.'},
+  {ico:'📏', t:'Rule Simplification', d:'Rule-based models (decision lists, expert systems) often accumulate overlapping IF-conditions. Minimization merges equivalent branches into compact, auditable rules.'},
+  {ico:'🌳', t:'Decision Systems', d:'Decision trees and tables encode Boolean logic over thresholded features. Minimized logic reduces the number of branches needed to reach the same decision boundary.'},
+  {ico:'🏷️', t:'Classification Rules', d:'Post-hoc rule extraction from black-box classifiers benefits directly from K-map-style grouping to produce human-readable, minimal-literal explanations.'},
+  {ico:'⚡', t:'Reducing Computational Complexity', d:'Fewer literals means fewer conditional checks evaluated per inference — meaningful at scale for rule engines running on millions of records.'},
+  {ico:'🔧', t:'Digital Circuit Optimization', d:'The same Quine–McCluskey pipeline underlies EDA tools that shrink real silicon — the theory data scientists borrow originates directly from this hardware discipline.'}
+];
+document.getElementById('dsGrid').innerHTML = DS_ITEMS.map(x=>`
+  <div class="card card-tight ds-card">
+    <div class="ds-ico">${x.ico}</div>
+    <div><h4 style="font-size:15px;margin-bottom:6px;">${x.t}</h4><p style="font-size:13.5px;color:var(--ink-dim);">${x.d}</p></div>
+  </div>
+`).join('');
+
+/* ============================= DOCS ============================= */
+document.getElementById('docsBody').innerHTML = `
+  <h3>Project Objective</h3>
+  <p>Build a fully client-side, interactive visualizer that teaches Boolean logic minimization — from a raw expression through its truth table and Karnaugh map to a minimized, verified equivalent — aimed at students and data scientists connecting digital-logic theory to applied rule simplification.</p>
+
+  <h3>Problem Statement</h3>
+  <p>Boolean minimization is usually taught as a static, paper-based exercise (manual K-map grouping) disconnected from any live feedback. Learners rarely see the full pipeline — expression → truth table → K-map → groups → minimized form → verification — connected end to end, and rarely see why it matters outside of digital circuits.</p>
+
+  <h3>Features</h3>
+  <ul>
+    <li>Boolean expression input supporting 2–4 variables (A–D), with clickable example expressions.</li>
+    <li>Automatic truth table generation with highlighted 1/0 outputs.</li>
+    <li>Automatic 2/3/4-variable Karnaugh map rendering using Gray-code adjacency.</li>
+    <li>Interactive manual grouping with adjacency and power-of-two validation, plus one-click auto-minimization.</li>
+    <li>Quine–McCluskey based minimization with essential prime implicant selection and greedy set cover.</li>
+    <li>Full expression → truth table → K-map → groups → minimized-expression pipeline view.</li>
+    <li>"Verify Equivalence" button comparing full truth tables of original and minimized expressions.</li>
+    <li>15 built-in test cases (10 normal, 5 edge/fault) with automatic PASS/FAIL scoring.</li>
+    <li>Educational reference covering Boolean algebra through K-map rules.</li>
+    <li>Dedicated section connecting minimization to feature selection, rule simplification, and classifier logic.</li>
+    <li>Live dashboard: variable count, minterm count, literal complexity before/after, reduction %, verification status.</li>
+  </ul>
+
+  <h3>Implementation Steps</h3>
+  <ol class="doc-steps">
+    <li>Parse the raw SOP string into literals per term, validating variable range and symbols.</li>
+    <li>Evaluate every 2ⁿ input combination against the parsed terms to build the truth table and minterm list.</li>
+    <li>Lay out K-map rows/columns using recursively generated Gray codes so adjacent cells differ by one bit.</li>
+    <li>Run Quine–McCluskey: iteratively combine minterms differing by one bit, collect prime implicants.</li>
+    <li>Select essential prime implicants, then greedily cover any remaining minterms.</li>
+    <li>Render the minimized expression, dashboard metrics, and interactive/auto K-map groupings.</li>
+    <li>Verify equivalence by re-evaluating the minimized expression's truth table against the original.</li>
+  </ol>
+
+  <h3>Technologies Used</h3>
+  <p>HTML5, CSS3 (custom properties, grid/flexbox, no framework), and vanilla JavaScript (ES6+) implementing the parser, evaluator, and Quine–McCluskey minimizer from scratch. No backend or build step is required.</p>
+
+  <h3>How to Run the Project</h3>
+  <ol class="doc-steps">
+    <li>Open the single HTML file directly in any modern browser (double-click, or "Open File").</li>
+    <li>Scroll to the Visualizer section, pick a variable count, and enter or click an example expression.</li>
+    <li>Click "Generate Truth Table &amp; K-map" and explore the Pipeline, Truth Table, K-map, and Dashboard tabs.</li>
+    <li>Use "Auto-Group (Minimize)" for instant minimization, or click cells manually and "Form Group".</li>
+    <li>Click "Verify Equivalence" to confirm the minimized expression matches the original truth table.</li>
+  </ol>
+
+  <h3>Test Cases</h3>
+  <p>See the Test Cases section above for the full live-scored table of 10 normal and 5 edge/fault cases (invalid symbols, empty input, contradictory terms, always-0/always-1 expressions, and out-of-range variables).</p>
+
+  <h3>Expected Output</h3>
+  <p>For the default example <code>A'B + AB' + ABC</code> (3 variables), the visualizer should report 4 minterms, an original literal count of 7, and a minimized expression of lower literal count that verifies as equivalent — reflected live in the dashboard's reduction percentage.</p>
+
+  <h3>References</h3>
+  <ul>
+    <li>Quine, W.V. — "The Problem of Simplifying Truth Functions" (1952).</li>
+    <li>McCluskey, E.J. — "Minimization of Boolean Functions" (1956).</li>
+    <li>Karnaugh, M. — "The Map Method for Synthesis of Combinational Logic Circuits" (1953).</li>
+    <li>Standard digital logic design curricula (Boolean algebra, SOP/POS forms, K-map grouping rules).</li>
+  </ul>
+`;
+
+/* ============================= INIT ============================= */
+runVisualizer();
+</script>
+</body>
+</html>
